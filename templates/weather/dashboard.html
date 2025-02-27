@@ -1,0 +1,439 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Weather Dashboard - AgroVision{% endblock %}
+
+{% block extra_css %}
+<style>
+    .weather-card {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+
+    .weather-icon {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto;
+    }
+
+    .weather-animation {
+        transition: all 0.3s ease;
+    }
+
+    .weather-animation:hover {
+        transform: scale(1.05);
+    }
+
+    .parameter-card {
+        text-align: center;
+        padding: 15px;
+        border-radius: 10px;
+        background: #f8f9fa;
+        margin: 10px;
+    }
+
+    .history-chart {
+        height: 300px;
+        margin-top: 20px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Add CSRF Token -->
+{% csrf_token %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="weather-card">
+                <h2 class="text-center mb-4">Weather Dashboard</h2>
+                <div class="location-selector mb-4">
+                    <div class="d-flex justify-content-center align-items-center">
+                        <button id="getLocation" class="btn btn-primary me-3">
+                            <i class="fas fa-location-arrow"></i> Use My Location
+                        </button>
+                        <div class="input-group" style="max-width: 400px;">
+                            <input type="text" id="locationInput" class="form-control" placeholder="Enter city name">
+                            <button class="btn btn-success" id="searchLocation">Search</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="weather-card fade-in">
+                <h3 class="text-center mb-3">Current Weather</h3>
+                <div id="currentWeather" class="text-center">
+                    <div class="weather-icon weather-animation mb-3">
+                        <!-- Weather SVG will be inserted here -->
+                    </div>
+                    <h4 id="location">Loading location...</h4>
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <div class="parameter-card">
+                                <i class="fas fa-temperature-high"></i>
+                                <h5>Temperature</h5>
+                                <p id="temperature">--°C</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="parameter-card">
+                                <i class="fas fa-tint"></i>
+                                <h5>Humidity</h5>
+                                <p id="humidity">--%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <div class="parameter-card">
+                                <i class="fas fa-wind"></i>
+                                <h5>Wind Speed</h5>
+                                <p id="windSpeed">-- m/s</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="parameter-card">
+                                <i class="fas fa-cloud-rain"></i>
+                                <h5>Precipitation</h5>
+                                <p id="precipitation">-- mm</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="weather-card fade-in">
+                <h3 class="text-center mb-3">Soil Conditions</h3>
+                <div class="text-center">
+                    <div class="parameter-card">
+                        <i class="fas fa-water"></i>
+                        <h5>Soil Moisture</h5>
+                        <p id="soilMoisture">--%</p>
+                    </div>
+                    <div id="soilConditionChart" class="mt-4" style="height: 200px;">
+                        <canvas id="soilMoistureCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="weather-card fade-in">
+                <h3 class="text-center mb-3">Weather History</h3>
+                <div id="weatherHistoryChart" class="history-chart">
+                    <canvas id="historyCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="errorContainer" class="alert alert-danger mt-3" style="display: none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const weatherIcons = {
+    'Clear': `
+        <svg class="weather-icon" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="20" fill="#FFD700"/>
+            <!-- Sun rays -->
+            <g stroke="#FFD700" stroke-width="4">
+                <line x1="50" y1="15" x2="50" y2="5"/>
+                <line x1="50" y1="85" x2="50" y2="95"/>
+                <line x1="15" y1="50" x2="5" y2="50"/>
+                <line x1="85" y1="50" x2="95" y2="50"/>
+                <line x1="26" y1="26" x2="19" y2="19"/>
+                <line x1="74" y1="74" x2="81" y2="81"/>
+                <line x1="26" y1="74" x2="19" y2="81"/>
+                <line x1="74" y1="26" x2="81" y2="19"/>
+            </g>
+        </svg>
+    `,
+    'Clouds': `
+        <svg class="weather-icon" viewBox="0 0 100 100">
+            <g fill="#B8B8B8">
+                <circle cx="40" cy="40" r="15"/>
+                <circle cx="55" cy="40" r="15"/>
+                <circle cx="45" cy="30" r="15"/>
+                <circle cx="60" cy="30" r="15"/>
+            </g>
+        </svg>
+    `,
+    'Rain': `
+        <svg class="weather-icon" viewBox="0 0 100 100">
+            <g fill="#B8B8B8">
+                <circle cx="50" cy="30" r="15"/>
+            </g>
+            <g stroke="#4A90E2" stroke-width="2">
+                <line x1="40" y1="50" x2="35" y2="70"/>
+                <line x1="50" y1="50" x2="45" y2="70"/>
+                <line x1="60" y1="50" x2="55" y2="70"/>
+            </g>
+        </svg>
+    `
+};
+
+let historyChart = null;
+let soilChart = null;
+
+// Initialize history data from Django context
+const initialHistoryData = {{ history_data_json|safe }};
+
+function updateWeatherDisplay(data) {
+    document.getElementById('location').textContent = data.location_name;
+    document.getElementById('temperature').textContent = `${data.temperature}°C`;
+    document.getElementById('humidity').textContent = `${data.humidity}%`;
+    document.getElementById('windSpeed').textContent = `${data.wind_speed} m/s`;
+    document.getElementById('precipitation').textContent = `${data.precipitation} mm`;
+    document.getElementById('soilMoisture').textContent = `${data.soil_moisture}%`;
+
+    // Update weather icon
+    const weatherIcon = weatherIcons[data.weather_condition] || weatherIcons['Clear'];
+    document.querySelector('.weather-icon').innerHTML = weatherIcon;
+
+    updateCharts(data);
+}
+
+function updateCharts(data) {
+    // Update soil moisture chart
+    if (soilChart) {
+        soilChart.destroy();
+    }
+
+    const soilCtx = document.getElementById('soilMoistureCanvas').getContext('2d');
+    soilChart = new Chart(soilCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Moisture', 'Remaining'],
+            datasets: [{
+                data: [data.soil_moisture, 100 - data.soil_moisture],
+                backgroundColor: ['#4ECDC4', '#f8f9fa'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Soil Moisture Level'
+                }
+            }
+        }
+    });
+
+    // Update history chart
+    if (historyChart) {
+        historyChart.destroy();
+    }
+
+    if (initialHistoryData && initialHistoryData.dates && initialHistoryData.dates.length > 0) {
+        const historyCtx = document.getElementById('historyCanvas').getContext('2d');
+        historyChart = new Chart(historyCtx, {
+            type: 'line',
+            data: {
+                labels: initialHistoryData.dates,
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        data: initialHistoryData.temperatures,
+                        borderColor: '#FF6B6B',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: 'Humidity (%)',
+                        data: initialHistoryData.humidity,
+                        borderColor: '#4ECDC4',
+                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y2'
+                    },
+                    {
+                        label: 'Soil Moisture (%)',
+                        data: initialHistoryData.soil_moisture,
+                        borderColor: '#45B7D1',
+                        backgroundColor: 'rgba(69, 183, 209, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y2'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Weather History'
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Date/Time'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        },
+                        beginAtZero: true
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Percentage (%)'
+                        },
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            position => fetchWeatherData({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            }),
+            error => {
+                console.error('Error getting location:', error);
+                alert('Unable to get your location. Please try searching for a city instead.');
+            }
+        );
+    } else {
+        alert('Geolocation is not supported by your browser. Please try searching for a city instead.');
+    }
+}
+
+function searchCity() {
+    const cityInput = document.getElementById('locationInput');
+    const city = cityInput.value.trim();
+    
+    if (city) {
+        fetchWeatherData({ city: city });
+    } else {
+        alert('Please enter a city name');
+    }
+}
+
+function fetchWeatherData(data) {
+    // Show loading state
+    document.getElementById('location').textContent = 'Loading...';
+    
+    // Clear previous error messages
+    const errorContainer = document.getElementById('errorContainer') || createErrorContainer();
+    errorContainer.style.display = 'none';
+    
+    fetch('/weather/data/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            errorContainer.style.display = 'none';
+            updateWeatherDisplay(data.data);
+        } else {
+            showError(data.message || 'Error fetching weather data');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError(`Error fetching weather data: ${error.message}`);
+    });
+}
+
+function createErrorContainer() {
+    const container = document.createElement('div');
+    container.id = 'errorContainer';
+    container.className = 'alert alert-danger mt-3';
+    container.style.display = 'none';
+    document.querySelector('.weather-card').appendChild(container);
+    return container;
+}
+
+function showError(message) {
+    const errorContainer = document.getElementById('errorContainer') || createErrorContainer();
+    errorContainer.textContent = message;
+    errorContainer.style.display = 'block';
+    document.getElementById('location').textContent = 'Error loading location';
+}
+
+// Event Listeners
+document.getElementById('getLocation').addEventListener('click', getLocation);
+document.getElementById('searchLocation').addEventListener('click', searchCity);
+document.getElementById('locationInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchCity();
+    }
+});
+
+// Initial load with geolocation
+getLocation();
+</script>
+{% endblock %} 
