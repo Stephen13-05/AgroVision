@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'community_chat.apps.CommunityChatConfig',
     'users.apps.UsersConfig',
     'weather.apps.WeatherConfig',
+    'treat',
 ]
 
 MIDDLEWARE = [
@@ -140,3 +141,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = 'community_chat:chat_home'
 LOGOUT_REDIRECT_URL = 'login'
 LOGIN_URL = 'login'
+
+GEMINI_API_KEY = "AIzaSyB6hLPsRlpJAp5jRoI1VrEjTvIl802Ljmk"
