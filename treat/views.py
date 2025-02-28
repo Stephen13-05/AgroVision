@@ -202,7 +202,7 @@ def treatment_recommendation(request):
     else:  # pest prediction
         # Get pest treatment recommendations
         treatment_plan = get_treatment_pest(label)
-        template = 'treat/pest_recommendation.html'
+        template = 'treat/treatment_recommendation.html'
     
     # For demonstration, using a placeholder image
     image = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ai%20recomondation-QUFZgxC58cN6TWsieh3agtREuKEIkh.png"
