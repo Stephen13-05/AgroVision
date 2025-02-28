@@ -38,11 +38,13 @@
             <img id="imagePreview" src="{{ file_url }}" alt="Uploaded Image">
 
             <h3>Prediction Result:</h3>
-            <p><strong>Label:{{label}}</strong> </p>
+            <p><strong>Label: {{label}}</strong></p>
             <p><strong>Confidence: {{ confidence}}</strong></p>
         </div>
-        <form action="" method="post">
-            <button type="submit" href="/treatment_recommnedation" value="{{label}}">AI Recommendations</button>
+        <form action="{% url 'treatment_recommendation' %}" method="GET">
+            <input type="hidden" name="prediction_type" value="{{ prediction_type }}">
+            <input type="hidden" name="label" value="{{ label }}">
+            <button type="submit" class="ai-recommend-btn">Get AI Recommendations</button>
         </form>
 
 </div>

@@ -192,21 +192,29 @@ def pest_input(request):
     return render(request, 'treat/pest.html')     
 
 def treatment_recommendation(request):
-    disease_name = request.GET.get('disease', 'Unknown Disease')
-    prediction_type = request.POST.get("prediction_type")
+    label = request.GET.get('label', 'Unknown')
+    prediction_type = request.GET.get('prediction_type', 'disease')
     
-    # Get treatment recommendations from Gemini
-    treatment_plan = get_treatment_recommendations(disease_name)
+    if prediction_type == 'disease':
+        # Get disease treatment recommendations from Gemini
+        treatment_plan = get_treatment_recommendations(label)
+        template = 'treat/treatment_recommendation.html'
+    else:  # pest prediction
+        # Get pest treatment recommendations
+        treatment_plan = get_treatment_pest(label)
+        template = 'treat/pest_recommendation.html'
     
     # For demonstration, using a placeholder image
-    disease_image = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ai%20recomondation-QUFZgxC58cN6TWsieh3agtREuKEIkh.png"
+    image = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ai%20recomondation-QUFZgxC58cN6TWsieh3agtREuKEIkh.png"
     
     context = {
         'treatment_plan': treatment_plan,
-        'disease_image': disease_image,
+        'image': image,
+        'prediction_type': prediction_type,
+        'label': label
     }
     
-    return render(request, 'treat/treatment_recommendation.html', context)
+    return render(request, template, context)
 
 def generate_qr_code(url):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
