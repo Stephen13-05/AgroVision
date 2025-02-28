@@ -2,3 +2,5 @@ db.sqlite3
 
 media/*
 tf_env/
+
+*/__pycache__/*
