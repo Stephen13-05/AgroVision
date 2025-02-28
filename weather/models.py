@@ -4,19 +4,20 @@ from django.utils import timezone
 # Create your models here.
 
 class WeatherHistory(models.Model):
-    date = models.DateTimeField(default=timezone.now)
-    temperature = models.FloatField()
-    humidity = models.FloatField()
-    wind_speed = models.FloatField()
-    precipitation = models.FloatField()
-    soil_moisture = models.FloatField()
-    weather_condition = models.CharField(max_length=100)
-    location_name = models.CharField(max_length=200)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    date = models.DateTimeField(auto_now_add=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    temperature = models.DecimalField(max_digits=5, decimal_places=2)
+    humidity = models.DecimalField(max_digits=5, decimal_places=2)
+    wind_speed = models.DecimalField(max_digits=5, decimal_places=2)
+    precipitation = models.DecimalField(max_digits=5, decimal_places=2)
+    weather_condition = models.CharField(max_length=50)
+    soil_moisture = models.DecimalField(max_digits=5, decimal_places=2)
+    soil_ph = models.DecimalField(max_digits=4, decimal_places=2, default=7.0)  # pH scale is 0-14
+    location_name = models.CharField(max_length=100)
 
     class Meta:
         ordering = ['-date']
 
     def __str__(self):
-        return f"Weather at {self.location_name} on {self.date.strftime('%Y-%m-%d %H:%M')}"
+        return f"{self.location_name} - {self.date}"
