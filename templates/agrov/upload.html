@@ -1,61 +1,61 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Prediction</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Link to external CSS -->
-</head>
-<body>
-    <div class="container">
-        <h2>Upload an Image for Prediction</h2>
+{% extends 'base.html'%}
 
-        <form method="POST" enctype="multipart/form-data">
-          
+{% block extra_css %}
+<link rel="stylesheet" href="{{ STATIC_URL }}css/upload.css">
+{% endblock %}
 
-            <div class="prediction-options">
-                <label class="prediction-box">
-                    <input type="radio" name="prediction_type" value="disease" required>
-                    <span>Disease Prediction</span>
-                </label>
+{% block title %}Upload Image - AgroVision
+{% endblock %}
 
-                <label class="prediction-box">
-                    <input type="radio" name="prediction_type" value="pest" required>
-                    <span>Pest Prediction</span>
-                </label>
-            </div>
+{% block content %}
+<div class="container">
+    <h2>Upload an Image for Prediction</h2>
 
-            <input type="file" name="image" id="imageUpload" required>
-            <label for="imageUpload" class="custom-file-upload">Choose File</label>
-            <p id="fileName">No file chosen</p>
+    <form method="POST" enctype="multipart/form-data">
+        {%csrf_token%}
 
-            <button type="submit">Upload & Predict</button>
-        </form>
-        
-            <div class="result-container">
-                <h3>Uploaded Image:</h3>
-                <img id="imagePreview" src="{{ file_url }}" alt="Uploaded Image">
+        <div class="prediction-options">
+            <label class="prediction-box">
+                <input type="radio" name="prediction_type" value="disease" required>
+                <span>Disease Prediction</span>
+            </label>
 
-                <h3>Prediction Result:</h3>
-                <p><strong>Label:</strong> </p>
-                <p><strong>Confidence:</strong></p>
-            </div>
+            <label class="prediction-box">
+                <input type="radio" name="prediction_type" value="pest" required>
+                <span>Pest Prediction</span>
+            </label>
+        </div>
+
+        <input type="file" name="image" id="imageUpload" required>
+        <label for="imageUpload" class="custom-file-upload">Choose File</label>
+        <p id="fileName">No file chosen</p>
+
+        <button type="submit">Upload & Predict</button>
+    </form>
     
-    </div>
+        <div class="result-container">
+            <h3>Uploaded Image:</h3>
+            <img id="imagePreview" src="{{ file_url }}" alt="Uploaded Image">
 
-    <script>
-        // Show selected file name
-        document.getElementById("imageUpload").addEventListener("change", function(event) {
-            const fileName = event.target.files[0] ? event.target.files[0].name : "No file chosen";
-            document.getElementById("fileName").textContent = fileName;
+            <h3>Prediction Result:</h3>
+            <p><strong>Label:{{label}}</strong> </p>
+            <p><strong>Confidence: {{ confidence}}</strong></p>
+        </div>
 
-            // Preview selected image before upload
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById("imagePreview").src = e.target.result;
-            };
-            reader.readAsDataURL(event.target.files[0]);
-        });
-    </script>
-</body>
-</html>
+</div>
+
+<script>
+    // Show selected file name
+    document.getElementById("imageUpload").addEventListener("change", function(event) {
+        const fileName = event.target.files[0] ? event.target.files[0].name : "No file chosen";
+        document.getElementById("fileName").textContent = fileName;
+
+        // Preview selected image before upload
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById("imagePreview").src = e.target.result;
+        };
+        reader.readAsDataURL(event.target.files[0]);
+    });
+</script>
+{% endblock %}
