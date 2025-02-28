@@ -49,9 +49,8 @@ PEST_CLASSES = [
 # Prediction function for disease
 def predict_disease(img_path):
     img = image.load_img(img_path, target_size=(192, 192))
-    img_array = image.img_to_array(img)
+    img_array = np.array(img)
     img_array = np.expand_dims(img_array, axis=0)
-    img_array /= 255.0  # Normalize
 
     predictions = disease_model.predict(img_array)
     predicted_class = DISEASE_CLASSES[np.argmax(predictions[0])]
@@ -65,14 +64,12 @@ def predict_disease(img_path):
 # Prediction function for pest
 def predict_pest(img_path):
     img = image.load_img(img_path, target_size=(256, 256))
-    img_array = image.img_to_array(img)
+    img_array =np.array(img)
     img_array = np.expand_dims(img_array, axis=0)
-    img_array = img_array / 255.0  # Ensure normalization matches training
-# Normalize
-
     predictions = pest_model.predict(img_array)
-    predicted_class = PEST_CLASSES[np.argmax(predictions[0])]
-    confidence = np.max(predictions[0]) * 100  # Convert to percentage
+    predicted_class = PEST_CLASSES[np.argmax(predictions)]
+    confidence = np.max(predictions) * 100  # Convert to percentage
+    print(predicted_class, confidence)
 
     return {
         "label": predicted_class,

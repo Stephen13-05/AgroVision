@@ -13,12 +13,8 @@
         
         <label>
             <input type="radio" name="prediction_type" value="disease" required> Disease Prediction
-        </label>
-        
-        <label>
             <input type="radio" name="prediction_type" value="pest" required> Pest Prediction
         </label>
-        
         <br><br>
         <input type="file" name="image" required>
         <button type="submit">Upload & Predict</button>
@@ -29,8 +25,8 @@
         <img src="{{ file_url }}" alt="Uploaded Image" width="300">
 
         <h3>Prediction Result:</h3>
-        <p><strong>Label:</strong> {{ prediction_label }}</p>
-        <p><strong>Confidence:</strong> {{ prediction_confidence }}</p>
+        <p><strong>Label:</strong> {{ label }}</p>
+        <p><strong>Confidence:</strong> {{confidence }}</p>
     {% endif %}
 </body>
 </html>

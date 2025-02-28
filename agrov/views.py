@@ -14,16 +14,26 @@ def upload_image(request):
 
         # Choose the correct model based on user selection
         if prediction_type == "disease":
-            prediction = predict_disease(fs.path(file_path))
+            predictions = predict_disease(fs.path(file_path))
+            if predictions:
+                label = predictions["label"]
+                confidence = predictions["confidence"]
+
         elif prediction_type == "pest":
-            prediction = predict_pest(fs.path(file_path))
+            predictions = predict_pest(fs.path(file_path))
+            if predictions:
+                label = predictions["label"]
+                confidence = predictions["confidence"]
         else:
-            prediction = {"label": "Invalid selection", "confidence": "N/A"}
+            label = "Invalid selection"
+            confidence = ""
 
         return render(request, "agrov/upload.html", {
             "file_url": file_url,
-            "prediction_label": prediction["label"],
-            "prediction_confidence": prediction["confidence"]
+            "label": label,
+            "confidence": confidence
         })
 
     return render(request, "agrov/upload.html")
+
+
