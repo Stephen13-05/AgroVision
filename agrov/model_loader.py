@@ -6,8 +6,8 @@ import os
 
 # Define paths for both models
 MODEL_PATHS = {
-    "pes": r"C:/ai/data preprocessing/mobilenetv2_model.h5",
-    "diease": r"C:/ai/ai/mobilenetv2_model.h5",
+    "pest": r"C:/ai/data preprocessing/mobilenetv2_model.h5",
+    "disease": r"C:/ai/ai/mobilenetv2_model.h5",
 }
 
 # Load models
