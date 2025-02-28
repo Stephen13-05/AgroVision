@@ -187,12 +187,13 @@ def create_pdf(treatment_plan, disease_image):
         print(traceback.format_exc())
         raise
 def disease_input(request):
-    return render(request, 'disease.html')   
+    return render(request, 'treat/disease.html')   
 def pest_input(request):
-    return render(request, 'pest.html')     
+    return render(request, 'treat/pest.html')     
 
 def treatment_recommendation(request):
     disease_name = request.GET.get('disease', 'Unknown Disease')
+    prediction_type = request.POST.get("prediction_type")
     
     # Get treatment recommendations from Gemini
     treatment_plan = get_treatment_recommendations(disease_name)
@@ -205,7 +206,7 @@ def treatment_recommendation(request):
         'disease_image': disease_image,
     }
     
-    return render(request, 'treatment_recommendation.html', context)
+    return render(request, 'treat/treatment_recommendation.html', context)
 
 def generate_qr_code(url):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -408,7 +409,7 @@ def pest_pdf(treatment_plan, pest_image):
 from django.shortcuts import render
 from weather.views import get_weather_data  # Import the existing weather data function
 
-FORECAST_TEMPLATE = 'forecasting.html'
+FORECAST_TEMPLATE = 'treat/forecasting.html'
 
 
 
