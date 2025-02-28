@@ -35,6 +35,39 @@
         margin: 10px;
     }
 
+    .forecast-scroll {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding: 20px 0;
+        margin: 0 -20px;
+        scroll-behavior: smooth;
+    }
+
+    .forecast-container {
+        display: inline-flex;
+        padding: 0 20px;
+    }
+
+    .forecast-card {
+        flex: 0 0 auto;
+        width: 200px;
+        margin-right: 15px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+
+    .forecast-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .forecast-card:last-child {
+        margin-right: 0;
+    }
+
     .history-chart {
         height: 300px;
         margin-top: 20px;
@@ -115,6 +148,16 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Add forecast section -->
+                    <div class="mt-4">
+                        <h4>8-Day Forecast</h4>
+                        <div class="forecast-scroll">
+                            <div id="forecastContainer" class="forecast-container">
+                                <!-- Forecast cards will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -123,10 +166,21 @@
             <div class="weather-card fade-in">
                 <h3 class="text-center mb-3">Soil Conditions</h3>
                 <div class="text-center">
-                    <div class="parameter-card">
-                        <i class="fas fa-water"></i>
-                        <h5>Soil Moisture</h5>
-                        <p id="soilMoisture">--%</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="parameter-card">
+                                <i class="fas fa-water"></i>
+                                <h5>Soil Moisture</h5>
+                                <p id="soilMoisture">--%</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="parameter-card">
+                                <i class="fas fa-flask"></i>
+                                <h5>Soil pH</h5>
+                                <p id="soilPH">--</p>
+                            </div>
+                        </div>
                     </div>
                     <div id="soilConditionChart" class="mt-4" style="height: 200px;">
                         <canvas id="soilMoistureCanvas"></canvas>
@@ -199,24 +253,62 @@ let historyChart = null;
 let soilChart = null;
 
 // Initialize history data from Django context
-const initialHistoryData = {{ history_data_json|safe }};
-
-function updateWeatherDisplay(data) {
-    document.getElementById('location').textContent = data.location_name;
-    document.getElementById('temperature').textContent = `${data.temperature}°C`;
-    document.getElementById('humidity').textContent = `${data.humidity}%`;
-    document.getElementById('windSpeed').textContent = `${data.wind_speed} m/s`;
-    document.getElementById('precipitation').textContent = `${data.precipitation} mm`;
-    document.getElementById('soilMoisture').textContent = `${data.soil_moisture}%`;
-
-    // Update weather icon
-    const weatherIcon = weatherIcons[data.weather_condition] || weatherIcons['Clear'];
-    document.querySelector('.weather-icon').innerHTML = weatherIcon;
-
-    updateCharts(data);
+let initialHistoryData = {};
+try {
+    initialHistoryData = JSON.parse('{{ history_data_json|escapejs }}');
+} catch (e) {
+    console.error('Error parsing history data:', e);
+    initialHistoryData = {
+        dates: [],
+        temperatures: [],
+        humidity: [],
+        soil_moisture: []
+    };
 }
 
-function updateCharts(data) {
+function updateWeatherDisplay(data) {
+    // Update current weather
+    document.getElementById('location').textContent = data.current.location_name;
+    document.getElementById('temperature').textContent = `${data.current.temperature}°C`;
+    document.getElementById('humidity').textContent = `${data.current.humidity}%`;
+    document.getElementById('windSpeed').textContent = `${data.current.wind_speed} m/s`;
+    document.getElementById('precipitation').textContent = `${data.current.precipitation} mm`;
+    document.getElementById('soilMoisture').textContent = `${data.current.soil_moisture}%`;
+    document.getElementById('soilPH').textContent = data.current.soil_ph;
+
+    // Update weather icon for current weather
+    const weatherIcon = weatherIcons[data.current.weather_condition] || weatherIcons['Clear'];
+    document.querySelector('.weather-icon').innerHTML = weatherIcon;
+
+    // Update forecast
+    const forecastContainer = document.getElementById('forecastContainer');
+    forecastContainer.innerHTML = ''; // Clear existing forecast
+
+    data.forecast.forEach((day, index) => {
+        const date = new Date(day.date);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        
+        const forecastCard = document.createElement('div');
+        forecastCard.className = 'forecast-card weather-animation';
+        forecastCard.innerHTML = `
+            <div class="weather-icon" style="width: 60px; height: 60px; margin-bottom: 10px;">
+                ${weatherIcons[day.weather_condition] || weatherIcons['Clear']}
+            </div>
+            <h6>${dayName}</h6>
+            <p class="mb-1">${monthDay}</p>
+            <p class="mb-1">${day.temperature}°C</p>
+            <p class="mb-1">${day.humidity}% Humidity</p>
+            <p class="mb-0">${day.description}</p>
+        `;
+        forecastContainer.appendChild(forecastCard);
+    });
+
+    // Update charts with both current and forecast data
+    updateCharts(data.current, data.forecast);
+}
+
+function updateCharts(currentData, forecastData) {
     // Update soil moisture chart
     if (soilChart) {
         soilChart.destroy();
@@ -228,7 +320,7 @@ function updateCharts(data) {
         data: {
             labels: ['Moisture', 'Remaining'],
             datasets: [{
-                data: [data.soil_moisture, 100 - data.soil_moisture],
+                data: [currentData.soil_moisture, 100 - currentData.soil_moisture],
                 backgroundColor: ['#4ECDC4', '#f8f9fa'],
                 borderWidth: 0
             }]
@@ -249,99 +341,140 @@ function updateCharts(data) {
         }
     });
 
-    // Update history chart
+    // Update history chart with current and forecast data
     if (historyChart) {
         historyChart.destroy();
     }
 
-    if (initialHistoryData && initialHistoryData.dates && initialHistoryData.dates.length > 0) {
-        const historyCtx = document.getElementById('historyCanvas').getContext('2d');
-        historyChart = new Chart(historyCtx, {
-            type: 'line',
-            data: {
-                labels: initialHistoryData.dates,
-                datasets: [
-                    {
-                        label: 'Temperature (°C)',
-                        data: initialHistoryData.temperatures,
-                        borderColor: '#FF6B6B',
-                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        yAxisID: 'y1'
-                    },
-                    {
-                        label: 'Humidity (%)',
-                        data: initialHistoryData.humidity,
-                        borderColor: '#4ECDC4',
-                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        yAxisID: 'y2'
-                    },
-                    {
-                        label: 'Soil Moisture (%)',
-                        data: initialHistoryData.soil_moisture,
-                        borderColor: '#45B7D1',
-                        backgroundColor: 'rgba(69, 183, 209, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        yAxisID: 'y2'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
+    // Prepare data for the chart
+    const dates = [new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })];
+    const temperatures = [currentData.temperature];
+    const humidities = [currentData.humidity];
+    const soilMoistures = [currentData.soil_moisture];
+    const soilPHs = [currentData.soil_ph];
+
+    // Add forecast data
+    if (forecastData && forecastData.length > 0) {
+        forecastData.forEach(day => {
+            const date = new Date(day.date);
+            dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            temperatures.push(day.temperature);
+            humidities.push(day.humidity);
+            // Use the current soil values for forecast days since we don't have future predictions
+            soilMoistures.push(currentData.soil_moisture);
+            soilPHs.push(currentData.soil_ph);
+        });
+    }
+
+    const historyCtx = document.getElementById('historyCanvas').getContext('2d');
+    historyChart = new Chart(historyCtx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [
+                {
+                    label: 'Temperature (°C)',
+                    data: temperatures,
+                    borderColor: '#FF6B6B',
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y1'
                 },
-                plugins: {
+                {
+                    label: 'Humidity (%)',
+                    data: humidities,
+                    borderColor: '#4ECDC4',
+                    backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y2'
+                },
+                {
+                    label: 'Soil Moisture (%)',
+                    data: soilMoistures,
+                    borderColor: '#45B7D1',
+                    backgroundColor: 'rgba(69, 183, 209, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y2'
+                },
+                {
+                    label: 'Soil pH',
+                    data: soilPHs,
+                    borderColor: '#FFA726',
+                    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y3'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Weather and Soil Conditions'
+                },
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
                     title: {
                         display: true,
-                        text: 'Weather History'
-                    },
-                    legend: {
-                        position: 'top',
+                        text: 'Date'
                     }
                 },
-                scales: {
-                    x: {
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
                         display: true,
-                        title: {
-                            display: true,
-                            text: 'Date/Time'
-                        }
+                        text: 'Temperature (°C)'
                     },
-                    y1: {
-                        type: 'linear',
+                    beginAtZero: true
+                },
+                y2: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
                         display: true,
-                        position: 'left',
-                        title: {
-                            display: true,
-                            text: 'Temperature (°C)'
-                        },
-                        beginAtZero: true
+                        text: 'Percentage (%)'
                     },
-                    y2: {
-                        type: 'linear',
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                },
+                y3: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
                         display: true,
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Percentage (%)'
-                        },
-                        beginAtZero: true,
-                        max: 100,
-                        grid: {
-                            drawOnChartArea: false
-                        }
+                        text: 'pH'
+                    },
+                    min: 0,
+                    max: 14,
+                    grid: {
+                        drawOnChartArea: false
                     }
                 }
             }
-        });
-    }
+        }
+    });
 }
 
 function getLocation() {
