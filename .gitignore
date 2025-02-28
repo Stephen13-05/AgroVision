@@ -6,3 +6,5 @@ users/migrations/__pycache__/
 weather/migrations/__pycache__/
 db.sqlite3
 .env
+__pycache__/
+*.pyc
