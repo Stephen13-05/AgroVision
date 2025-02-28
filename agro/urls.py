@@ -32,6 +32,6 @@ urlpatterns = [
         http_method_names=['get', 'post']
     ), name='logout'),
     path('weather/', include('weather.urls')),
-    path('treat/',include('treat.urls'))
-    path('ai/',include('agrov.urls'),name="ai")
+    path('treat/',include('treat.urls')),
+    path('ai/',include('agrov.urls'),name="ai"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
