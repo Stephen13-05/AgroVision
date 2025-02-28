@@ -3,3 +3,9 @@ db.sqlite3
 */__pycache__/*
 *.pyc
 iiit/*
+
+media/*
+tf_env/
+
+treat/
+weather/
