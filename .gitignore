@@ -1,7 +1,6 @@
 */__pycache__/*
 agrov/migrations/__pycache__/
 community_chat/migrations/__pycache__/
-treat/
 users/migrations/__pycache__/
 weather/migrations/__pycache__/
 db.sqlite3
