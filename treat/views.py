@@ -11,7 +11,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-import numpy as np
+from weather.views import get_weather_data
 # Configure Gemini API
 genai.configure(api_key=settings.GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
@@ -246,41 +246,48 @@ def download_pdf(request):
 
 def get_treatment_pest(pest_name):
     prompt = f"""
-    Provide a detailed treatment plan for the pest: {pest_name}
+    Provide a comprehensive, weather-aware treatment plan for the pest: {pest_name}
     Include the following information:
-    1. Attack reasons (list 2-3 main reasons)
-    2. Prevention tips (list 3-4 tips)
-    3. Natural remedies (list 2-3 remedies)
-    4. Chemical control (list 2-3 options)
+    1. Attack reasons (list 2-3 main reasons, including weather conditions that favor pest activity)
+    2. Prevention tips (list 3-4 tips, considering current and forecasted weather)
+    3. Natural remedies (list 2-3 remedies, with timing recommendations based on weather)
+    4. Chemical control (list 2-3 options, with application guidelines considering weather)
+    5. Weather-based warnings (specific alerts based on 4-10 day forecast)
+    6. Integrated Pest Management (IPM) strategy combining all approaches
     
     Format your response exactly like this example:
     {{
         "pest_name": "{pest_name}",
         "attack_reasons": [
-            "Warm and humid conditions",
-            "Overuse of nitrogen-rich fertilizers"
+            "Thrives in warm, humid conditions (current humidity: 65%)",
+            "Population increases after heavy rainfall"
         ],
         "prevention_tips": [
-            "Encourage beneficial insects",
-            "Avoid excessive nitrogen fertilizers"
+            "Install row covers before forecasted rain",
+            "Adjust irrigation to avoid creating humid microclimates"
         ],
         "natural_remedies": [
-            "Spray neem oil",
-            "Use a homemade garlic spray"
+            "Apply neem oil spray in the evening when rain is not forecasted for 48 hours",
+            "Release beneficial insects when temperatures are between 20-25°C"
         ],
         "chemical_control": [
-            "Apply insecticidal soap",
-            "Use pyrethrin-based insecticides"
+            "Apply insecticidal soap when rain is not expected for 24 hours",
+            "Use pyrethrin-based insecticides in the early morning"
         ],
+        "weather_warnings": [
+            "Warning: Heavy rain forecasted in 2 days - take preventive measures",
+            "Alert: Temperature spike expected in 3 days - monitor pest activity"
+        ],
+        "ipm_strategy": "Combine cultural, biological and chemical controls based on weather patterns",
         "image": "pest_image.jpg",
         "fertilization_strategies": [
             "Use balanced fertilizers during the growing season",
             "Apply organic compost to improve soil health",
             "Follow soil test recommendations for nutrient application"
         ]
-
     }}
     """
+
     
     response = model.generate_content(prompt)
     
@@ -397,3 +404,97 @@ def pest_pdf(treatment_plan, pest_image):
     except Exception as e:
         print(f"Error in pest_pdf: {str(e)}")
         raise
+
+from django.shortcuts import render
+from weather.views import get_weather_data  # Import the existing weather data function
+
+FORECAST_TEMPLATE = 'forecasting.html'
+
+
+
+def generate_growth_recommendations(request):
+    """View to generate weather forecast and growth recommendations."""
+    if request.method == 'GET':
+        try:
+            # Get location parameters from request
+            city = request.GET.get('city')
+            latitude = request.GET.get('latitude')
+            longitude = request.GET.get('longitude')
+            
+            # Create POST request with provided location
+            post_data = json.dumps({
+                'city': city,
+                'latitude': latitude,
+                'longitude': longitude
+            })
+
+
+
+            # Create a new POST request
+            from django.http import HttpRequest
+            post_request = HttpRequest()
+            post_request.method = 'POST'
+            post_request._body = post_data
+            post_request.content_type = 'application/json'
+            weather_response = get_weather_data(post_request)
+
+            print(f"Weather response status: {weather_response.status_code}")  # Debug log
+            print(f"Weather response content: {weather_response.content}")  # Debug log
+            if weather_response.status_code == 200:
+                response_data = json.loads(weather_response.content)
+                if response_data.get('status') == 'success':
+                    weather_data = response_data.get('data', {})
+                    print(f"Weather data: {weather_data}")  # Debug log
+
+                    
+
+                    # Generate growth recommendations using Gemini AI
+                    prompt = f"""
+                    Based on the following weather data, provide crop-specific advice:
+                    - Temperature: {weather_data.get('current', {}).get('temperature', 'N/A')} °C
+                    - Humidity: {weather_data.get('current', {}).get('humidity', 'N/A')} %
+                    - Soil Moisture: {weather_data.get('current', {}).get('soil_moisture', 'N/A')} %
+                    - Soil pH: {weather_data.get('current', {}).get('soil_ph', 'N/A')}
+                    - 4-10 Day Forecast: {weather_data.get('forecast', [])}
+
+                    Format requirements:
+                    - Use emojis to make text engaging
+                    - Maximum 7 lines
+                    - Precise and to the point
+                    - Include:
+                      1. 🌱 Fertilization recommendations
+                      2. 💧 Irrigation schedule
+                      3. 🌍 Soil management tips
+                      4. 🌾 Crop-specific advice
+                      5. ⚠️ Weather warnings
+                    """
+
+
+                    try:
+                        response = model.generate_content(prompt)
+                        growth_recommendations = response.text
+                    except Exception as e:
+                        print(f"Error generating growth recommendations: {str(e)}")
+                        growth_recommendations = "Unable to generate recommendations at this time. Please try again later."
+                    
+                    if not growth_recommendations:
+                        growth_recommendations = "No growth recommendations available."
+
+                    context = {
+                        'weather_data': weather_data,
+                        'growth_recommendations': growth_recommendations
+                    }
+
+                    print(f"Context data being passed to template: {context}")  # Debug log
+
+                    return render(request, FORECAST_TEMPLATE, context)
+                else:
+                    return render(request, FORECAST_TEMPLATE, {'error': response_data.get('message', 'Failed to fetch weather data')})
+            else:
+                return render(request, FORECAST_TEMPLATE, {'error': 'Weather API error'})
+
+        except Exception as e:
+            print(f"Error in generate_growth_recommendations: {str(e)}")
+            return render(request, FORECAST_TEMPLATE, {'error': str(e)})
+
+    return render(request, FORECAST_TEMPLATE)
