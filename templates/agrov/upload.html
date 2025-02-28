@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Prediction</title>
+</head>
+<body>
+    <h2>Upload an Image for Prediction</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <label>
+            <input type="radio" name="prediction_type" value="disease" required> Disease Prediction
+        </label>
+        
+        <label>
+            <input type="radio" name="prediction_type" value="pest" required> Pest Prediction
+        </label>
+        
+        <br><br>
+        <input type="file" name="image" required>
+        <button type="submit">Upload & Predict</button>
+    </form>
+
+    {% if file_url %}
+        <h3>Uploaded Image:</h3>
+        <img src="{{ file_url }}" alt="Uploaded Image" width="300">
+
+        <h3>Prediction Result:</h3>
+        <p><strong>Label:</strong> {{ prediction_label }}</p>
+        <p><strong>Confidence:</strong> {{ prediction_confidence }}</p>
+    {% endif %}
+</body>
+</html>

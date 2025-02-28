@@ -31,4 +31,5 @@ urlpatterns = [
         next_page='login',
         http_method_names=['get', 'post']
     ), name='logout'),
+    path('ai/',include('agrov.urls'),name="ai")
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
