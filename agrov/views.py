@@ -45,3 +45,5 @@ def upload_image(request):
     return render(request, "agrov/upload.html")
 
 
+def scheme(request):
+    return render(request, 'agrov/scheme.html')

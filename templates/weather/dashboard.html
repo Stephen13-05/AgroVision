@@ -133,14 +133,14 @@
             <div class="weather-card">
                 <h2 class="text-center mb-4">Weather Dashboard</h2>
                 <div class="location-selector mb-4">
-                    <div class="d-flex justify-content-center align-items-center">
-                        <button id="getLocation" class="btn btn-primary me-3">
-                            <i class="fas fa-location-arrow"></i> Use My Location
-                        </button>
-                        <div class="input-group" style="max-width: 400px;">
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="input-group mb-4" style="max-width: 400px;">
                             <input type="text" id="locationInput" class="form-control" placeholder="Enter city name">
                             <button class="btn btn-success" id="searchLocation">Search</button>
                         </div>
+                        <button id="getLocation" class="btn btn-primary" style="width: 300px;">
+                            <i class="fas fa-location-arrow"></i> Use My Location
+                        </button>
                     </div>
                 </div>
             </div>
@@ -655,7 +655,10 @@ document.getElementById('locationInput').addEventListener('keypress', function(e
     }
 });
 
-// Initial load with geolocation
-getLocation();
+// Initial load with default city (Chittoor)
+document.addEventListener('DOMContentLoaded', function() {
+    showLoading('Loading weather data...');
+    fetchWeatherData({ city: 'Chittoor' });
+});
 </script>
 {% endblock %} 

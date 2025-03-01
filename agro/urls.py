@@ -20,10 +20,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from users import views as user_views
-from agrov.views import upload_image
+from agrov.views import upload_image, scheme
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("",upload_image),
+    path("scheme/",scheme),
     path('chat/', include('community_chat.urls', namespace='community_chat')),
     path('signup/', user_views.signup, name='signup'),
     path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),

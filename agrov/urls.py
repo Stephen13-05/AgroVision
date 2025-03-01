@@ -21,7 +21,6 @@ from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
-    path("admin/", admin.site.urls),  # Admin panel
     path("upload_img/", views.upload_image, name="upload-img"),  # Upload image
 ]
 
