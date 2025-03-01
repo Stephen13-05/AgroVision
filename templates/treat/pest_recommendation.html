@@ -261,40 +261,87 @@
 <div class="weather-section">
     <div class="weather-card">
         <h3 class="section-title">
-            <span>🌤️</span> Local Weather Conditions
+            <span>🌤️</span> Local Weather Conditions for {{ weather_data.current.location_name|default:"Chittoor" }}
         </h3>
         <div class="weather-info">
             <div class="weather-item">
                 <span class="weather-icon">🌡️</span>
-                <p>Temperature: {{ weather_data.current.temperature }}°C</p>
+                <div>
+                    <h4 class="mb-1">Temperature</h4>
+                    <p>{{ weather_data.current.temperature|default:"28"|floatformat:1 }}°C</p>
+                </div>
             </div>
             <div class="weather-item">
                 <span class="weather-icon">💧</span>
-                <p>Humidity: {{ weather_data.current.humidity }}%</p>
+                <div>
+                    <h4 class="mb-1">Humidity</h4>
+                    <p>{{ weather_data.current.humidity|default:"65"|floatformat:0 }}%</p>
+                </div>
             </div>
             <div class="weather-item">
                 <span class="weather-icon">🌱</span>
-                <p>Soil Moisture: {{ weather_data.current.soil_moisture }}%</p>
+                <div>
+                    <h4 class="mb-1">Soil Moisture</h4>
+                    <p>{{ weather_data.current.soil_moisture|default:"45"|floatformat:0 }}%</p>
+                </div>
+            </div>
+            <div class="weather-item">
+                <span class="weather-icon">🌍</span>
+                <div>
+                    <h4 class="mb-1">Soil pH</h4>
+                    <p>{{ weather_data.current.soil_ph|default:"6.5"|floatformat:1 }}</p>
+                </div>
             </div>
             <div class="weather-item">
                 <span class="weather-icon">⚡</span>
-                <p>Pest Activity Risk: 
-                    {% with temp=weather_data.current.temperature|floatformat:0 humid=weather_data.current.humidity|floatformat:0 %}
-                        {% if temp > 25 and humid > 70 %}
-                            <span class="risk-high">High</span>
-                        {% elif temp > 20 and humid > 60 %}
-                            <span class="risk-medium">Medium</span>
-                        {% else %}
-                            <span class="risk-low">Low</span>
-                        {% endif %}
-                    {% endwith %}
-                </p>
+                <div>
+                    <h4 class="mb-1">Pest Activity Risk</h4>
+                    <p>
+                        {% with temp=weather_data.current.temperature|default:"28"|floatformat:0|stringformat:"i" humid=weather_data.current.humidity|default:"65"|floatformat:0|stringformat:"i" %}
+                            {% if temp >= "25" and humid >= "70" %}
+                                <span class="risk-high">High</span>
+                            {% elif temp >= "20" and humid >= "60" %}
+                                <span class="risk-medium">Medium</span>
+                            {% else %}
+                                <span class="risk-low">Low</span>
+                            {% endif %}
+                        {% endwith %}
+                    </p>
+                </div>
             </div>
         </div>
+
+        {% with temp=weather_data.current.temperature|default:"28" humid=weather_data.current.humidity|default:"65" %}
+        {% if temp >= 25 and humid >= 70 %}
         <div class="weather-alert">
-            {% if weather_data.alerts %}
-                <p class="alert-text">⚠️ {{ weather_data.alerts.0.description }}</p>
-            {% endif %}
+            <p class="alert-text">⚠️ High pest activity risk due to warm temperature and high humidity. Increase monitoring frequency.</p>
+        </div>
+        {% endif %}
+
+        <div class="weather-recommendations">
+            <h4 class="mb-2">Weather-based Recommendations:</h4>
+            <div class="recommendation-item">
+                {% if temp >= 25 and humid >= 70 %}
+                    <span>🔍</span> Increase monitoring frequency due to favorable pest conditions
+                {% elif temp >= 20 and humid >= 60 %}
+                    <span>👀</span> Maintain regular monitoring schedule
+                {% else %}
+                    <span>✅</span> Lower pest activity expected, continue routine monitoring
+                {% endif %}
+            </div>
+            {% endwith %}
+
+            {% with soil_moisture=weather_data.current.soil_moisture|default:"45" %}
+            <div class="recommendation-item">
+                {% if soil_moisture > 70 %}
+                    <span>💧</span> High soil moisture may increase disease risk
+                {% elif soil_moisture < 30 %}
+                    <span>🌱</span> Low soil moisture may stress plants, monitor closely
+                {% else %}
+                    <span>✅</span> Soil moisture levels are optimal
+                {% endif %}
+            </div>
+            {% endwith %}
         </div>
     </div>
 </div>

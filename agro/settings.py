@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'weather.apps.WeatherConfig',
     'treat',
+    'agrov',
 ]
 
 MIDDLEWARE = [

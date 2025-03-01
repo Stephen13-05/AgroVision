@@ -226,19 +226,19 @@
         <div class="file-upload-area">
             <input type="file" name="image" id="imageUpload" required accept="image/*">
             <label for="imageUpload" class="custom-file-upload">
-                <i class="fas fa-cloud-upload-alt mr-2"></i>Choose File
+                <i class="fas fa-cloud-upload-alt mr-2"></i>  Choose File
             </label>
             <p id="fileName" class="text-sm">No file chosen</p>
         </div>
 
         <button type="submit">
-            <i class="fas fa-upload mr-2"></i>Upload & Predict
+            <i class="fas fa-upload mr-2"></i>  Upload & Predict
         </button>
     </form>
     
     {% if file_url %}
         <div class="result-container">
-            <h3 class="text-xl font-semibold mb-4">Uploaded Image</h3>
+            <h3 class="text-xl font-semibold mb-4"> Uploaded Image</h3>
             <img id="imagePreview" src="{{ file_url }}" alt="Uploaded Image" class="mx-auto">
 
             <div class="prediction-result">

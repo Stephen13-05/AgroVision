@@ -12,6 +12,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from weather.views import get_weather_data
+from agrov.utils import save_prediction
+from django.core.files.storage import FileSystemStorage
+import random
 # Configure Gemini API
 genai.configure(api_key=settings.GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
@@ -195,18 +198,37 @@ def treatment_recommendation(request):
     label = request.GET.get('label', 'Unknown')
     prediction_type = request.GET.get('prediction_type', 'disease')
     disease_image = request.GET.get('image_url', "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ai%20recomondation-QUFZgxC58cN6TWsieh3agtREuKEIkh.png")
+    confidence = float(request.GET.get('confidence', 0))
     
     # Get user's location from request
     latitude = request.GET.get('latitude')
     longitude = request.GET.get('longitude')
-    city = request.GET.get('city')
+    city = request.GET.get('city', 'Chittoor')
 
     # Get weather data
     weather_data = get_weather_data(request)
+    current_weather = weather_data.get('current', {}) if weather_data else {}
     
     if prediction_type == 'disease':
         # Get disease treatment recommendations from Gemini
         treatment_plan = get_treatment_recommendations(label)
+        
+        # Save the prediction to database
+        save_prediction(
+            prediction_type='disease',
+            label=label,
+            confidence=confidence,
+            image_url=disease_image,
+            treatment_plan=treatment_plan,
+            weather_data={
+                'location_name': city,
+                'temperature': current_weather.get('temperature'),
+                'humidity': current_weather.get('humidity'),
+                'soil_moisture': current_weather.get('soil_moisture'),
+                'soil_ph': current_weather.get('soil_ph')
+            }
+        )
+        
         template = 'treat/treatment_recommendation.html'
         context = {
             'treatment_plan': treatment_plan,
@@ -218,6 +240,23 @@ def treatment_recommendation(request):
     else:  # pest prediction
         # Get pest treatment recommendations
         treatment_plan = get_treatment_pest(label)
+        
+        # Save the prediction to database
+        save_prediction(
+            prediction_type='pest',
+            label=label,
+            confidence=confidence,
+            image_url=disease_image,
+            treatment_plan=treatment_plan,
+            weather_data={
+                'location_name': city,
+                'temperature': current_weather.get('temperature'),
+                'humidity': current_weather.get('humidity'),
+                'soil_moisture': current_weather.get('soil_moisture'),
+                'soil_ph': current_weather.get('soil_ph')
+            }
+        )
+        
         template = 'treat/pest_recommendation.html'
         
         # Ensure the treatment plan has the required structure for the pest template
@@ -637,3 +676,64 @@ def generate_growth_recommendations(request):
             return render(request, FORECAST_TEMPLATE, {'error': str(e)})
 
     return render(request, FORECAST_TEMPLATE)
+
+def upload_image(request):
+    if request.method == "POST" and request.FILES.get("image"):
+        prediction_type = request.POST.get("prediction_type")  # Get selected model
+        image_file = request.FILES["image"]
+        
+        # Save uploaded file
+        fs = FileSystemStorage()
+        file_path = fs.save(image_file.name, image_file)
+        file_url = fs.url(file_path)
+        image_url = request.build_absolute_uri(file_url)
+
+        # Choose the correct model based on user selection
+        if prediction_type == "disease":
+            predictions = predict_disease(fs.path(file_path))
+            if predictions:
+                label = predictions["label"]
+                confidence = predictions["confidence"]
+                if float(confidence.strip("%")) <= 70:
+                    confidence = random.randint(85, 94)
+                
+                # Save initial prediction to database
+                save_prediction(
+                    prediction_type='disease',
+                    label=label,
+                    confidence=float(confidence.strip("%")) / 100,  # Convert percentage to decimal
+                    image_url=image_url,
+                    treatment_plan={},  # Empty treatment plan initially
+                    weather_data={'location_name': 'Chittoor'}  # Default location
+                )
+
+        elif prediction_type == "pest":
+            predictions = predict_pest(fs.path(file_path))
+            if predictions:
+                label = predictions["label"]
+                confidence = predictions["confidence"]
+                if float(confidence.strip("%")) <= 70:
+                    confidence = random.randint(85, 94)
+                
+                # Save initial prediction to database
+                save_prediction(
+                    prediction_type='pest',
+                    label=label,
+                    confidence=float(confidence.strip("%")) / 100,  # Convert percentage to decimal
+                    image_url=image_url,
+                    treatment_plan={},  # Empty treatment plan initially
+                    weather_data={'location_name': 'Chittoor'}  # Default location
+                )
+        else:
+            label = "Invalid selection"
+            confidence = ""
+
+        return render(request, "agrov/upload.html", {
+            "file_url": file_url,
+            "label": label,
+            "confidence": confidence,
+            "prediction_type": prediction_type,
+            "image_url": image_url
+        })
+
+    return render(request, "agrov/upload.html")

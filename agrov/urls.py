@@ -22,6 +22,7 @@ from . import views
 
 urlpatterns = [
     path("upload_img/", views.upload_image, name="upload-img"),  # Upload image
+
 ]
 
 if settings.DEBUG:

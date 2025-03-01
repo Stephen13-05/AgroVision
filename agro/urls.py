@@ -20,6 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from users import views as user_views
+from agrov.views import history
 from agrov.views import upload_image, scheme
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -36,5 +37,5 @@ urlpatterns = [
     path('weather/', include('weather.urls')),
     path('treat/',include('treat.urls')),
     path('ai/',include('agrov.urls'),name="ai"),
-    path('history/',upload_image)
+    path('history/', history, name='history'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
