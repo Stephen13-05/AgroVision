@@ -5,6 +5,34 @@
 
 Our Pest and Disease Prediction System is a high-accuracy, AI-powered solution designed to help farmers identify and manage pests and crop diseases effectively. The system achieves a 95% accuracy rate, identifying 8 types of pests and 15 crop diseases. It integrates real-time weather and soil data to provide customized treatment plans and enhance agricultural decision-making. Our model can be used offline, ensuring accessibility even in remote areas.
 
+Plant diseases classes : 
+'Pepper__bell___Bacterial_spot',
+ 'Potato___Early_blight',
+ 'Potato___Late_blight',
+ 'Tomato_Bacterial_spot',
+ 'Tomato_Early_blight',
+ 'Tomato_Late_blight',
+ 'Tomato_Leaf_Mold',
+ 'Tomato_Septoria_leaf_spot',
+ 'Tomato_Spider_mites_Two_spotted_spider_mite',
+ 'Tomato__Target_Spot',
+ 'Tomato__Tomato_YellowLeaf__Curl_Virus',
+ 'Tomato__Tomato_mosaic_virus',
+
+Pest classes : 
+ 'aphids',
+ 'armyworm',
+ 'beetle',
+ 'bollworm',
+ 'grasshopper',
+ 'mites',
+ 'mosquito',
+ 'sawfly',
+ 'stem_borer'
+
+we are working on other datasets ....
+
+
 # FEATURES
 
 # 🌱 AI-Powered Pest & Disease Identification
