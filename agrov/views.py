@@ -37,7 +37,9 @@ def upload_image(request):
         return render(request, "agrov/upload.html", {
             "file_url": file_url,
             "label": label,
-            "confidence": confidence
+            "confidence": confidence,
+            "prediction_type": prediction_type,  # Add prediction type to context
+            "image_url": request.build_absolute_uri(file_url)  # Add full image URL
         })
 
     return render(request, "agrov/upload.html")

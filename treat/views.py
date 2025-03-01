@@ -194,26 +194,97 @@ def pest_input(request):
 def treatment_recommendation(request):
     label = request.GET.get('label', 'Unknown')
     prediction_type = request.GET.get('prediction_type', 'disease')
+    disease_image = request.GET.get('image_url', "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ai%20recomondation-QUFZgxC58cN6TWsieh3agtREuKEIkh.png")
+    
+    # Get user's location from request
+    latitude = request.GET.get('latitude')
+    longitude = request.GET.get('longitude')
+    city = request.GET.get('city')
+
+    # Get weather data
+    weather_data = get_weather_data(request)
     
     if prediction_type == 'disease':
         # Get disease treatment recommendations from Gemini
         treatment_plan = get_treatment_recommendations(label)
         template = 'treat/treatment_recommendation.html'
+        context = {
+            'treatment_plan': treatment_plan,
+            'disease_image': disease_image,
+            'prediction_type': prediction_type,
+            'label': label,
+            'weather_data': weather_data
+        }
     else:  # pest prediction
         # Get pest treatment recommendations
         treatment_plan = get_treatment_pest(label)
-        template = 'treat/treatment_recommendation.html'
+        template = 'treat/pest_recommendation.html'
+        
+        # Ensure the treatment plan has the required structure for the pest template
+        if not isinstance(treatment_plan.get('economic_impact'), dict):
+            treatment_plan['economic_impact'] = {
+                'yield_loss': 'Unknown',
+                'damage_details': [],
+                'quality_impact': []
+            }
+        if not isinstance(treatment_plan.get('life_cycle'), dict):
+            treatment_plan['life_cycle'] = {
+                'stages': [],
+                'duration': 'Unknown',
+                'peak_activity': 'Unknown',
+                'favorable_conditions': []
+            }
+        if not isinstance(treatment_plan.get('host_information'), dict):
+            treatment_plan['host_information'] = {
+                'primary_hosts': [],
+                'secondary_hosts': [],
+                'vulnerable_varieties': [],
+                'susceptible_stages': []
+            }
+        if not isinstance(treatment_plan.get('detection'), dict):
+            treatment_plan['detection'] = {
+                'early_signs': [],
+                'scouting_guidelines': [],
+                'damage_identification': []
+            }
+        if not isinstance(treatment_plan.get('management'), dict):
+            treatment_plan['management'] = {
+                'crop_rotation': [],
+                'planting_timing': [],
+                'sanitation': []
+            }
+        
+        # Add weather-based pest activity risk assessment
+        if weather_data and 'current' in weather_data:
+            temp = float(weather_data['current'].get('temperature', 0))
+            humidity = float(weather_data['current'].get('humidity', 0))
+            
+            # Calculate pest activity risk based on weather conditions
+            if temp > 25 and humidity > 70:
+                pest_risk = "High"
+                risk_details = "Current weather conditions are highly favorable for pest activity."
+            elif temp > 20 and humidity > 60:
+                pest_risk = "Medium"
+                risk_details = "Moderate risk of pest activity under current conditions."
+            else:
+                pest_risk = "Low"
+                risk_details = "Weather conditions are less favorable for pest activity."
+            
+            weather_data['pest_risk'] = {
+                'level': pest_risk,
+                'details': risk_details
+            }
+        
+        context = {
+            'treatment_plan': treatment_plan,
+            'disease_image': disease_image,
+            'prediction_type': prediction_type,
+            'label': label,
+            'weather_data': weather_data
+        }
     
-    # For demonstration, using a placeholder image
-    image = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ai%20recomondation-QUFZgxC58cN6TWsieh3agtREuKEIkh.png"
-    
-    context = {
-        'treatment_plan': treatment_plan,
-        'image': image,
-        'prediction_type': prediction_type,
-        'label': label
-    }
-    
+    print("Template being used:", template)  # Debug print
+    print("Treatment plan:", treatment_plan)  # Debug print
     return render(request, template, context)
 
 def generate_qr_code(url):
@@ -255,76 +326,119 @@ def download_pdf(request):
 
 def get_treatment_pest(pest_name):
     prompt = f"""
-    Provide a comprehensive, weather-aware treatment plan for the pest: {pest_name}
-    Include the following information:
-    1. Attack reasons (list 2-3 main reasons, including weather conditions that favor pest activity)
-    2. Prevention tips (list 3-4 tips, considering current and forecasted weather)
-    3. Natural remedies (list 2-3 remedies, with timing recommendations based on weather)
-    4. Chemical control (list 2-3 options, with application guidelines considering weather)
-    5. Weather-based warnings (specific alerts based on 4-10 day forecast)
-    6. Integrated Pest Management (IPM) strategy combining all approaches
-    
+    Provide a comprehensive pest management plan for: {pest_name}
+    Include the following detailed information:
+
+    1. Economic Impact:
+        - Potential crop yield loss (percentage range)
+        - Specific crop damage details
+        - Quality impact on harvest
+
+    2. Pest Life Cycle:
+        - Different life stages
+        - Duration of each stage
+        - Peak activity periods
+        - Favorable conditions
+
+    3. Host Information:
+        - Primary host crops
+        - Secondary host plants
+        - Most susceptible crop varieties
+        - Crop stage vulnerability
+
+    4. Detection and Monitoring:
+        - Early warning signs
+        - Scouting guidelines and frequency
+        - Specific damage identification
+        - Monitoring tools and methods
+
+    5. Management Practices:
+        - Crop rotation recommendations
+        - Optimal planting times
+        - Field sanitation practices
+        - Cultural control methods
+
     Format your response exactly like this example:
     {{
         "pest_name": "{pest_name}",
-        "attack_reasons": [
-            "Thrives in warm, humid conditions (current humidity: 65%)",
-            "Population increases after heavy rainfall"
-        ],
-        "prevention_tips": [
-            "Install row covers before forecasted rain",
-            "Adjust irrigation to avoid creating humid microclimates"
-        ],
-        "natural_remedies": [
-            "Apply neem oil spray in the evening when rain is not forecasted for 48 hours",
-            "Release beneficial insects when temperatures are between 20-25°C"
-        ],
-        "chemical_control": [
-            "Apply insecticidal soap when rain is not expected for 24 hours",
-            "Use pyrethrin-based insecticides in the early morning"
-        ],
-        "weather_warnings": [
-            "Warning: Heavy rain forecasted in 2 days - take preventive measures",
-            "Alert: Temperature spike expected in 3 days - monitor pest activity"
-        ],
-        "ipm_strategy": "Combine cultural, biological and chemical controls based on weather patterns",
-        "image": "pest_image.jpg",
-        "fertilization_strategies": [
-            "Use balanced fertilizers during the growing season",
-            "Apply organic compost to improve soil health",
-            "Follow soil test recommendations for nutrient application"
-        ]
+        "economic_impact": {{
+            "yield_loss": "30-50% if untreated",
+            "damage_details": ["Feeds on developing fruits", "Reduces marketable yield", "Affects fruit quality"],
+            "quality_impact": ["Scarring on fruits", "Secondary infection entry points", "Reduced storage life"]
+        }},
+        "life_cycle": {{
+            "stages": ["Egg", "Larva", "Pupa", "Adult"],
+            "duration": "Complete cycle: 25-30 days",
+            "peak_activity": "Mid-summer to early fall",
+            "favorable_conditions": ["Temperature: 25-30°C", "High humidity", "Dense crop canopy"]
+        }},
+        "host_information": {{
+            "primary_hosts": ["Tomato", "Pepper", "Potato"],
+            "secondary_hosts": ["Eggplant", "Wild solanaceous plants"],
+            "vulnerable_varieties": ["Early maturing varieties", "Determinate types"],
+            "susceptible_stages": ["Flowering", "Fruit development"]
+        }},
+        "detection": {{
+            "early_signs": ["Small holes in leaves", "Presence of frass", "Wilting of new growth"],
+            "scouting_guidelines": ["Check 10 plants per acre", "Focus on field edges", "Weekly monitoring"],
+            "damage_identification": ["Characteristic feeding patterns", "Entry holes in fruits", "Stem boring symptoms"]
+        }},
+        "management": {{
+            "crop_rotation": ["Rotate with non-host crops", "Minimum 3-year rotation", "Avoid susceptible crops"],
+            "planting_timing": ["Early planting recommended", "Avoid peak pest periods"],
+            "sanitation": ["Remove crop debris", "Clean equipment", "Manage weeds"]
+        }}
     }}
     """
-
     
     response = model.generate_content(prompt)
     
     try:
         cleaned_text = response.text.strip()
         if cleaned_text.startswith("```json"):
-            cleaned_text = cleaned_text[7:-3]  # Remove ```json and ``` if present
+            cleaned_text = cleaned_text[7:-3]
         
         treatment_plan = json.loads(cleaned_text)
         
         # Validate the structure
-        required_keys = ['pest_name', 'attack_reasons', 'prevention_tips', 'natural_remedies', 'chemical_control']
+        required_keys = ['economic_impact', 'life_cycle', 'host_information', 'detection', 'management']
         for key in required_keys:
             if key not in treatment_plan:
-                treatment_plan[key] = []
+                treatment_plan[key] = {}
                 
     except (json.JSONDecodeError, AttributeError) as e:
         print(f"Error parsing response: {e}")
         print(f"Raw response: {response.text}")
         
-        # Fallback to a default response
         treatment_plan = {
             "pest_name": pest_name,
-            "attack_reasons": ["No data available."],
-            "prevention_tips": ["No prevention tips found."],
-            "natural_remedies": ["No remedies available."],
-            "chemical_control": ["No chemical treatment recommended."],
-            "pest_image": "default_pest.jpg"
+            "economic_impact": {
+                "yield_loss": "Data not available",
+                "damage_details": ["Please consult local agricultural extension"],
+                "quality_impact": ["Data not available"]
+            },
+            "life_cycle": {
+                "stages": ["Data not available"],
+                "duration": "Data not available",
+                "peak_activity": "Data not available",
+                "favorable_conditions": ["Data not available"]
+            },
+            "host_information": {
+                "primary_hosts": ["Data not available"],
+                "secondary_hosts": ["Data not available"],
+                "vulnerable_varieties": ["Data not available"],
+                "susceptible_stages": ["Data not available"]
+            },
+            "detection": {
+                "early_signs": ["Data not available"],
+                "scouting_guidelines": ["Data not available"],
+                "damage_identification": ["Data not available"]
+            },
+            "management": {
+                "crop_rotation": ["Data not available"],
+                "planting_timing": ["Data not available"],
+                "sanitation": ["Data not available"]
+            }
         }
     
     return treatment_plan
@@ -383,29 +497,45 @@ def pest_pdf(treatment_plan, pest_image):
             print(f"Error adding image: {str(img_error)}")
             story.append(Paragraph("Image not available", body_style))
 
-        # Attack Reasons
-        story.append(Paragraph("🔍 Attack Reasons:", heading_style))
-        for reason in treatment_plan.get('attack_reasons', []):
-            story.append(Paragraph(f"✅ {reason}", body_style))
-        story.append(Spacer(1, 20))
+        # Economic Impact
+        story.append(Paragraph("💰 Economic Impact:", heading_style))
+        for key, value in treatment_plan['economic_impact'].items():
+            story.append(Paragraph(f"{key.capitalize()}:", body_style))
+            for item in value:
+                story.append(Paragraph(f"• {item}", body_style))
+            story.append(Spacer(1, 20))
 
-        # Prevention Tips
-        story.append(Paragraph("🚜 Prevention Tips:", heading_style))
-        for tip in treatment_plan.get('prevention_tips', []):
-            story.append(Paragraph(f"✔ {tip}", body_style))
-        story.append(Spacer(1, 20))
+        # Pest Life Cycle
+        story.append(Paragraph("🌱 Pest Life Cycle:", heading_style))
+        for key, value in treatment_plan['life_cycle'].items():
+            story.append(Paragraph(f"{key.capitalize()}:", body_style))
+            for item in value:
+                story.append(Paragraph(f"• {item}", body_style))
+            story.append(Spacer(1, 20))
 
-        # Natural Remedies
-        story.append(Paragraph("🌿 Natural Remedies:", heading_style))
-        for remedy in treatment_plan.get('natural_remedies', []):
-            story.append(Paragraph(f"🌱 {remedy}", body_style))
-        story.append(Spacer(1, 20))
+        # Host Information
+        story.append(Paragraph("🌾 Host Information:", heading_style))
+        for key, value in treatment_plan['host_information'].items():
+            story.append(Paragraph(f"{key.capitalize()}:", body_style))
+            for item in value:
+                story.append(Paragraph(f"• {item}", body_style))
+            story.append(Spacer(1, 20))
 
-        # Chemical Control
-        story.append(Paragraph("🧪 Chemical Control:", heading_style))
-        for control in treatment_plan.get('chemical_control', []):
-            story.append(Paragraph(f"⚗ {control}", body_style))
-        story.append(Spacer(1, 20))
+        # Detection and Monitoring
+        story.append(Paragraph("🔍 Detection and Monitoring:", heading_style))
+        for key, value in treatment_plan['detection'].items():
+            story.append(Paragraph(f"{key.capitalize()}:", body_style))
+            for item in value:
+                story.append(Paragraph(f"• {item}", body_style))
+            story.append(Spacer(1, 20))
+
+        # Management Practices
+        story.append(Paragraph("🛠 Management Practices:", heading_style))
+        for key, value in treatment_plan['management'].items():
+            story.append(Paragraph(f"{key.capitalize()}:", body_style))
+            for item in value:
+                story.append(Paragraph(f"• {item}", body_style))
+            story.append(Spacer(1, 20))
 
         doc.build(story)
         buffer.seek(0)
